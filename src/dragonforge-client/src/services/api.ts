@@ -121,6 +121,14 @@ export async function childLogin(code: string) {
   return data as { sessionToken: string; childId: string; displayName: string };
 }
 
+export async function parentPlay() {
+  const res = await parentFetch("/api/auth/parent-play", { method: "POST" });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Failed to start game");
+  setChildSession(data.sessionToken);
+  return data as { sessionToken: string; childId: string; displayName: string };
+}
+
 export async function childLogout() {
   const session = getChildSession();
   if (session) {

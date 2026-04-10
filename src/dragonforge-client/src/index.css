@@ -1178,6 +1178,61 @@ body {
   color: var(--text-primary);
 }
 
+.parent-play-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 2px solid var(--accent-orange);
+  border-radius: 10px;
+  margin-bottom: 24px;
+}
+
+.parent-play-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.parent-play-stats { display: flex; flex-direction: column; gap: 2px; }
+
+.parent-play-title {
+  font-family: var(--font-clean);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.parent-play-detail {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.btn-play-game {
+  font-family: var(--font-clean);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--accent-orange), #ff8c42);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.btn-play-game:hover { opacity: 0.9; }
+
+.section-title {
+  font-family: var(--font-clean);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
 .parent-loading, .parent-empty {
   text-align: center;
   color: var(--text-secondary);

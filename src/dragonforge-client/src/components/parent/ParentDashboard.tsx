@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getChildren, createChild, generateChildCode, clearParentToken } from "../../services/api";
+import { getChildren, createChild, generateChildCode, clearParentToken, parentPlay } from "../../services/api";
 import type { EvolutionStage } from "../../types/game";
 import DragonAvatar from "../shared/DragonAvatar";
 import ChildDetail from "./ChildDetail";
@@ -16,9 +16,10 @@ interface Child {
 
 interface Props {
   onLogout: () => void;
+  onPlay: () => void;
 }
 
-export default function ParentDashboard({ onLogout }: Props) {
+export default function ParentDashboard({ onLogout, onPlay }: Props) {
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<string | null>(null);
   const [showAddChild, setShowAddChild] = useState(false);
@@ -39,6 +40,10 @@ export default function ParentDashboard({ onLogout }: Props) {
   }, []);
 
   useEffect(() => { loadChildren(); }, [loadChildren]);
+
+  // Separate parent's own profile from kids
+  const selfProfile = children.find((c) => c.avatarChoice === "__parent_self__");
+  const kidProfiles = children.filter((c) => c.avatarChoice !== "__parent_self__");
 
   const handleAddChild = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +67,15 @@ export default function ParentDashboard({ onLogout }: Props) {
     }
   };
 
+  const handlePlay = async () => {
+    try {
+      await parentPlay();
+      onPlay();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start game");
+    }
+  };
+
   const handleLogout = () => {
     clearParentToken();
     onLogout();
@@ -73,7 +87,7 @@ export default function ParentDashboard({ onLogout }: Props) {
       return (
         <ChildDetail
           child={child}
-          onBack={() => setSelectedChild(null)}
+          onBack={() => { setSelectedChild(null); loadChildren(); }}
           onGenerateCode={() => handleGenerateCode(child.id)}
         />
       );
@@ -108,16 +122,42 @@ export default function ParentDashboard({ onLogout }: Props) {
         </div>
       )}
 
-      {/* Children Grid */}
+      {/* Parent's Own Game Card */}
+      <div className="parent-play-card">
+        <div className="parent-play-info">
+          <DragonAvatar
+            stage={(selfProfile?.currentStage ?? "Egg") as EvolutionStage}
+            highestLevelCompleted={selfProfile?.highestLevelCompleted ?? 0}
+            size={64}
+          />
+          <div className="parent-play-stats">
+            <h3 className="parent-play-title">Your Game</h3>
+            {selfProfile ? (
+              <p className="parent-play-detail">
+                {selfProfile.totalPoints} pts &middot; Level {selfProfile.highestLevelCompleted} &middot; {selfProfile.currentStage}
+              </p>
+            ) : (
+              <p className="parent-play-detail">Start your own typing adventure!</p>
+            )}
+          </div>
+        </div>
+        <button className="btn btn-play-game" onClick={handlePlay}>
+          Play Game
+        </button>
+      </div>
+
+      {/* Kids Section */}
+      <h2 className="section-title">Kids</h2>
+
       {loading ? (
         <p className="parent-loading">Loading...</p>
-      ) : children.length === 0 ? (
+      ) : kidProfiles.length === 0 ? (
         <div className="parent-empty">
           <p>No child profiles yet. Add one to get started!</p>
         </div>
       ) : (
         <div className="children-grid">
-          {children.map((child) => (
+          {kidProfiles.map((child) => (
             <div key={child.id} className="child-card">
               <div className="child-card-avatar" onClick={() => setSelectedChild(child.id)}>
                 <DragonAvatar

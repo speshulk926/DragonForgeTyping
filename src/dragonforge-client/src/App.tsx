@@ -134,6 +134,12 @@ export default function App() {
   const handleLogout = useCallback(() => {
     if (authMode === "online") {
       childLogout();
+      // If parent is logged in, go back to dashboard instead of name screen
+      if (isParentLoggedIn()) {
+        setProfile(null);
+        setScreen("parentDashboard");
+        return;
+      }
     } else {
       clearProfile();
     }
@@ -143,7 +149,16 @@ export default function App() {
   }, [authMode]);
 
   const handleBackToLevels = useCallback(() => {
-    if (authMode === "local") {
+    if (authMode === "online") {
+      getGameProfile().then((data) => {
+        setProfile((prev) => prev ? {
+          ...prev,
+          highestLevelCompleted: data.highestLevelCompleted,
+          totalPoints: data.totalPoints,
+          currentStage: data.currentStage as EvolutionStage,
+        } : prev);
+      }).catch(() => {});
+    } else {
       const updated = getProfile();
       if (updated) setProfile(updated);
     }
@@ -175,7 +190,23 @@ export default function App() {
   // Parent dashboard
   if (screen === "parentDashboard") {
     return (
-      <ParentDashboard onLogout={() => setScreen("name")} />
+      <ParentDashboard
+        onLogout={() => setScreen("name")}
+        onPlay={() => {
+          // Parent just got a child session via parentPlay() — load their game profile
+          getGameProfile().then((data) => {
+            setProfile({
+              name: data.displayName,
+              highestLevelCompleted: data.highestLevelCompleted,
+              totalPoints: data.totalPoints,
+              currentStage: data.currentStage as EvolutionStage,
+              attempts: [],
+            });
+            setAuthMode("online");
+            setScreen("levels");
+          });
+        }}
+      />
     );
   }
 

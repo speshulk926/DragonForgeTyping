@@ -86,6 +86,45 @@ public class AuthController(AuthService auth, AppDbContext db) : ControllerBase
         return Ok(new ChildLoginResponse(rawToken, otp.ChildProfileId, otp.ChildProfile.DisplayName));
     }
 
+    [HttpPost("parent-play")]
+    [Authorize]
+    public async Task<IActionResult> ParentPlay()
+    {
+        var parentId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+        var parent = await db.Users.FindAsync(parentId);
+        if (parent == null) return Unauthorized();
+
+        // Find or create the parent's own game profile
+        var selfProfile = await db.ChildProfiles
+            .FirstOrDefaultAsync(c => c.ParentId == parentId && c.DisplayName == parent.DisplayName && c.AvatarChoice == "__parent_self__");
+
+        if (selfProfile == null)
+        {
+            selfProfile = new ChildProfile
+            {
+                ParentId = parentId,
+                DisplayName = parent.DisplayName,
+                AvatarChoice = "__parent_self__"
+            };
+            db.ChildProfiles.Add(selfProfile);
+            await db.SaveChangesAsync();
+        }
+
+        // Create a session token
+        var rawToken = AuthService.GenerateSessionToken();
+        var session = new DeviceSession
+        {
+            ChildProfileId = selfProfile.Id,
+            TokenHash = AuthService.HashToken(rawToken),
+            DeviceName = Request.Headers.UserAgent.FirstOrDefault(),
+            ExpiresAt = DateTime.UtcNow.AddDays(30)
+        };
+        db.DeviceSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        return Ok(new ChildLoginResponse(rawToken, selfProfile.Id, selfProfile.DisplayName));
+    }
+
     [HttpPost("child-logout")]
     public async Task<IActionResult> ChildLogout()
     {
