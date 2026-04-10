@@ -469,6 +469,18 @@ body {
   gap: 8px;
 }
 
+.btn-mute {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.btn-mute:hover { opacity: 1; }
+
 .btn-back-hud {
   font-family: var(--font-pixel);
   font-size: 14px;
@@ -691,6 +703,26 @@ body {
   margin-bottom: 24px;
   display: inline-block;
   animation: badge-glow 1.5s ease-in-out infinite alternate;
+}
+
+.perfect-forge-particles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 201;
+}
+
+.level-complete-card.perfect-forge {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 40px rgba(255, 215, 0, 0.3), 0 0 80px rgba(255, 107, 53, 0.15);
+  animation: slide-up 0.4s ease-out, perfect-pulse 2s ease-in-out infinite 0.5s;
+}
+
+@keyframes perfect-pulse {
+  0%, 100% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.3), 0 0 80px rgba(255, 107, 53, 0.15); }
+  50% { box-shadow: 0 0 60px rgba(255, 215, 0, 0.5), 0 0 100px rgba(255, 107, 53, 0.25); }
 }
 
 @keyframes badge-glow {
@@ -1231,6 +1263,54 @@ body {
   font-weight: 600;
   color: var(--text-secondary);
   margin-bottom: 12px;
+}
+
+/* Sibling Leaderboard */
+.leaderboard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-clean);
+  font-size: 14px;
+}
+
+.leaderboard-table th {
+  text-align: left;
+  padding: 10px 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.leaderboard-table td {
+  padding: 10px 14px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.leaderboard-table tr:last-child td { border-bottom: none; }
+
+.leaderboard-first td {
+  color: var(--accent-gold);
+  font-weight: 600;
+}
+
+.leaderboard-rank {
+  font-size: 18px;
+  width: 40px;
+}
+
+.leaderboard-name {
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
 .parent-loading, .parent-empty {

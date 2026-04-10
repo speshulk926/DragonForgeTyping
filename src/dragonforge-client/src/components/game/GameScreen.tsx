@@ -3,7 +3,7 @@ import { useTypingEngine } from "../../hooks/useTypingEngine";
 import { calculatePoints } from "../../services/scoring";
 import { saveAttempt, getProfile } from "../../services/storage";
 import { checkEvolution } from "../../services/evolution";
-import { playCorrectSound, playErrorSound } from "../../services/sounds";
+import { playCorrectSound, playErrorSound, isMuted, toggleMuted } from "../../services/sounds";
 import type { LevelDefinition, LevelAttemptResult, EvolutionStage } from "../../types/game";
 import HeartsDisplay from "./HeartsDisplay";
 import TypingPrompt from "./TypingPrompt";
@@ -30,6 +30,7 @@ export default function GameScreen({ level, stage, highestLevelCompleted, isOnli
     badge: string | null;
   } | null>(null);
   const [pendingEvolution, setPendingEvolution] = useState<EvolutionStage | null>(null);
+  const [muted, setMuted] = useState(isMuted);
 
   // Keep input focused
   useEffect(() => {
@@ -135,6 +136,13 @@ export default function GameScreen({ level, stage, highestLevelCompleted, isOnli
         <div className="hud-right">
           <span className="stat-display">{state.wpm} WPM</span>
           <span className="stat-display">{state.accuracy}%</span>
+          <button
+            className="btn-mute"
+            onClick={() => setMuted(toggleMuted())}
+            title={muted ? "Unmute" : "Mute"}
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
         </div>
       </div>
 

@@ -146,6 +146,41 @@ export default function ParentDashboard({ onLogout, onPlay }: Props) {
         </button>
       </div>
 
+      {/* Sibling Leaderboard */}
+      {kidProfiles.length >= 2 && (
+        <>
+          <h2 className="section-title">Leaderboard</h2>
+          <div className="leaderboard">
+            <table className="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Points</th>
+                  <th>Level</th>
+                  <th>Stage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...kidProfiles]
+                  .sort((a, b) => b.totalPoints - a.totalPoints)
+                  .map((child, i) => (
+                    <tr key={child.id} className={i === 0 ? "leaderboard-first" : ""}>
+                      <td className="leaderboard-rank">
+                        {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
+                      </td>
+                      <td className="leaderboard-name">{child.displayName}</td>
+                      <td>{child.totalPoints}</td>
+                      <td>{child.highestLevelCompleted}</td>
+                      <td>{child.currentStage}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
       {/* Kids Section */}
       <h2 className="section-title">Kids</h2>
 
