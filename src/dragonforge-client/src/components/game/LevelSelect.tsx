@@ -83,6 +83,20 @@ export default function LevelSelect({ profile, onSelectLevel, onLogout }: Props)
         </div>
       )}
 
+      {/* Level Completion Progress */}
+      <div className="level-progress-card">
+        <div className="evo-progress-header">
+          <span className="evo-progress-label">Levels Completed</span>
+          <span className="evo-progress-pct">{profile.highestLevelCompleted}/{levels.length}</span>
+        </div>
+        <div className="evo-progress-bar-track">
+          <div
+            className="level-progress-bar-fill"
+            style={{ width: `${(profile.highestLevelCompleted / levels.length) * 100}%` }}
+          />
+        </div>
+      </div>
+
       <h2 className="level-select-title">Select a Level</h2>
 
       <div className="level-grid">
