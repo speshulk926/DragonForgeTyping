@@ -19,7 +19,6 @@ type Step = (typeof STEPS)[number];
 
 export default function Tutorial({ onComplete }: Props) {
   const [step, setStep] = useState<Step>("story1");
-  const [practiceInput, setPracticeInput] = useState("");
   const [practiceTarget] = useState("fjfjfjfj");
   const [practiceIndex, setPracticeIndex] = useState(0);
   const [practiceErrors, setPracticeErrors] = useState(0);
@@ -73,7 +72,6 @@ export default function Tutorial({ onComplete }: Props) {
 
     const expected = practiceTarget[practiceIndex];
     if (e.key === expected) {
-      setPracticeInput((prev) => prev + e.key);
       setPracticeIndex((prev) => prev + 1);
     } else {
       setPracticeErrors((prev) => prev + 1);
