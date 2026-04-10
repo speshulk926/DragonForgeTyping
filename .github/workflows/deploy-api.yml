@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: dragonforge-api   # Change to your App Service name
+  AZURE_WEBAPP_NAME: dragonforge-api
   DOTNET_VERSION: '10.0.x'
 
 jobs:
@@ -27,7 +27,7 @@ jobs:
         run: dotnet publish src/DragonForge.Api/DragonForge.Api.csproj -c Release -o ./publish
 
       - name: Deploy to Azure App Service
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_API_PUBLISH_PROFILE }}
