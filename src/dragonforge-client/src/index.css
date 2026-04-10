@@ -281,19 +281,73 @@ body {
   gap: 4px;
 }
 
-.evolution-hint {
-  text-align: center;
-  font-family: var(--font-pixel);
-  font-size: 9px;
-  color: var(--text-secondary);
+.evolution-progress-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 10px 16px;
+  border-radius: 10px;
+  padding: 14px 18px;
   margin-bottom: 16px;
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.evo-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.evo-progress-label {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--accent-gold);
+}
+
+.evo-progress-pct {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.evo-progress-bar-track {
+  height: 10px;
+  background: var(--bg-dark);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.evo-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-orange), var(--accent-gold));
+  border-radius: 5px;
+  transition: width 0.5s ease-out;
+  min-width: 0;
+}
+
+.evo-progress-details {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.evo-detail {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.evo-detail.met {
+  color: var(--accent-green);
+}
+
+.evo-detail-icon {
+  font-size: 10px;
 }
 
 .level-select-title {

@@ -1,5 +1,5 @@
 import { getAllLevels } from "../../services/levels";
-import { getStageInfo, getNextStageInfo } from "../../services/evolution";
+import { getStageInfo, getEvolutionProgress } from "../../services/evolution";
 import type { PlayerProfile } from "../../types/game";
 import DragonAvatar from "../shared/DragonAvatar";
 
@@ -11,6 +11,7 @@ interface Props {
 
 export default function LevelSelect({ profile, onSelectLevel, onLogout }: Props) {
   const levels = getAllLevels();
+  const progress = getEvolutionProgress(profile);
 
   return (
     <div className="level-select-screen">
@@ -27,15 +28,39 @@ export default function LevelSelect({ profile, onSelectLevel, onLogout }: Props)
         </button>
       </div>
 
-      {(() => {
-        const next = getNextStageInfo(profile.currentStage);
-        if (!next) return null;
-        return (
-          <div className="evolution-hint">
-            Next evolution: {next.label} — {next.description}
+      {/* Evolution Progress */}
+      {progress && (
+        <div className="evolution-progress-card">
+          <div className="evo-progress-header">
+            <span className="evo-progress-label">Next: {progress.nextStage.label}</span>
+            <span className="evo-progress-pct">{Math.round(progress.overallPercent)}%</span>
           </div>
-        );
-      })()}
+          <div className="evo-progress-bar-track">
+            <div
+              className="evo-progress-bar-fill"
+              style={{ width: `${progress.overallPercent}%` }}
+            />
+          </div>
+          <div className="evo-progress-details">
+            <div className={`evo-detail ${progress.passesPercent >= 100 ? "met" : ""}`}>
+              <span className="evo-detail-icon">{progress.passesPercent >= 100 ? "✓" : "○"}</span>
+              <span>{progress.passesCurrent}/{progress.passesRequired} attempts</span>
+            </div>
+            {progress.wpmRequired && (
+              <div className={`evo-detail ${progress.wpmPercent >= 100 ? "met" : ""}`}>
+                <span className="evo-detail-icon">{progress.wpmPercent >= 100 ? "✓" : "○"}</span>
+                <span>{progress.wpmCurrent}/{progress.wpmRequired} WPM</span>
+              </div>
+            )}
+            {progress.accuracyRequired && (
+              <div className={`evo-detail ${progress.accuracyPercent >= 100 ? "met" : ""}`}>
+                <span className="evo-detail-icon">{progress.accuracyPercent >= 100 ? "✓" : "○"}</span>
+                <span>{progress.accuracyCurrent}/{progress.accuracyRequired}% accuracy</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <h2 className="level-select-title">Select a Level</h2>
 
@@ -44,7 +69,6 @@ export default function LevelSelect({ profile, onSelectLevel, onLogout }: Props)
           const isUnlocked = level.levelNumber <= profile.highestLevelCompleted + 1;
           const isCompleted = level.levelNumber <= profile.highestLevelCompleted;
 
-          // Find best attempt for this level
           const attempts = profile.attempts.filter(
             (a) => a.levelNumber === level.levelNumber && a.passed
           );

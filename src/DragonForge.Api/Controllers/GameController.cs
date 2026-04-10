@@ -94,36 +94,46 @@ public class GameController(AppDbContext db) : ControllerBase
         });
     }
 
+    // Stage requirements: (minPasses, minWpm, minAccuracy)
+    private static readonly (EvolutionStage Stage, int MinPasses, double? MinWpm, double? MinAcc)[] StageReqs =
+    [
+        (EvolutionStage.InfernoDragon, 70, 90, 95),
+        (EvolutionStage.ElderDragon,   45, 70, 95),
+        (EvolutionStage.FireDrake,     30, 50, 95),
+        (EvolutionStage.YoungDragon,   20, 30, 95),
+        (EvolutionStage.Drake,         10, 20, 95),
+        (EvolutionStage.Hatchling,      5, null, null),
+    ];
+
     private async Task<EvolutionStage> ComputeStage(ChildProfile child)
     {
-        if (child.HighestLevelCompleted < 5) return EvolutionStage.Egg;
-
         var passed = await db.LevelAttempts
             .Where(a => a.ChildProfileId == child.Id && a.Passed)
             .OrderByDescending(a => a.CompletedAt)
             .ToListAsync();
 
-        // Only count top 5 distinct levels
+        var totalPasses = passed.Count;
+
+        // Top 5 distinct levels for WPM/accuracy averaging
         var topLevels = passed
-            .Select(a => a.LevelDefinitionId)
-            .Distinct()
-            .Take(5)
-            .ToHashSet();
-
+            .Select(a => a.LevelDefinitionId).Distinct()
+            .Take(5).ToHashSet();
         var relevant = passed.Where(a => topLevels.Contains(a.LevelDefinitionId)).Take(10).ToList();
+        var avgWpm = relevant.Count >= 10 ? relevant.Average(a => (double)a.Wpm) : 0;
+        var avgAcc = relevant.Count >= 10 ? relevant.Average(a => (double)a.Accuracy) : 0;
 
-        if (relevant.Count >= 10)
+        foreach (var req in StageReqs)
         {
-            var avgWpm = relevant.Average(a => (double)a.Wpm);
-            var avgAcc = relevant.Average(a => (double)a.Accuracy);
-
-            if (avgWpm >= 90 && avgAcc >= 95) return EvolutionStage.InfernoDragon;
-            if (avgWpm >= 70 && avgAcc >= 95) return EvolutionStage.ElderDragon;
-            if (avgWpm >= 50 && avgAcc >= 95) return EvolutionStage.FireDrake;
-            if (avgWpm >= 30 && avgAcc >= 95) return EvolutionStage.YoungDragon;
-            if (avgWpm >= 20 && avgAcc >= 95) return EvolutionStage.Drake;
+            if (totalPasses < req.MinPasses) continue;
+            if (req.MinWpm == null) // Hatchling — just needs passes + levels
+            {
+                if (child.HighestLevelCompleted >= req.MinPasses) return req.Stage;
+                continue;
+            }
+            if (relevant.Count >= 10 && avgWpm >= req.MinWpm && avgAcc >= req.MinAcc)
+                return req.Stage;
         }
 
-        return EvolutionStage.Hatchling;
+        return EvolutionStage.Egg;
     }
 }
