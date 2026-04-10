@@ -62,12 +62,7 @@ export default function App() {
     const p = createProfile(name);
     setProfile(p);
     setAuthMode("local");
-    // Show tutorial for brand new players
-    if (!localStorage.getItem("df_tutorial_done")) {
-      setScreen("tutorial");
-    } else {
-      setScreen("levels");
-    }
+    setScreen("tutorial");
   }, []);
 
   const handleChildLogin = useCallback((displayName: string) => {

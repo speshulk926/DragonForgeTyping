@@ -83,6 +83,9 @@ export default function Tutorial({ onComplete }: Props) {
   return (
     <div className="tutorial-screen">
       <div className="tutorial-card">
+        <button className="tutorial-skip" onClick={onComplete}>
+          Skip Tutorial
+        </button>
         {/* Progress dots */}
         <div className="tutorial-dots">
           {STEPS.map((s, i) => (
