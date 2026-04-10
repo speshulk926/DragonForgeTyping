@@ -24,10 +24,15 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Auto-migrate database on startup
-using (var scope = app.Services.CreateScope())
+try
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Database migration failed");
 }
 
 if (app.Environment.IsDevelopment())
@@ -38,4 +43,6 @@ if (app.Environment.IsDevelopment())
 app.UseCors();
 app.MapControllers();
 
-app.Run();
+// Azure App Service expects the app to listen on PORT env var
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+app.Run($"http://0.0.0.0:{port}");
