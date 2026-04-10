@@ -107,9 +107,12 @@ export default function LevelSelect({ profile, onSelectLevel, onLogout }: Props)
           const attempts = profile.attempts.filter(
             (a) => a.levelNumber === level.levelNumber && a.passed
           );
-          const bestAttempt = attempts.length > 0
-            ? attempts.reduce((best, a) => (a.pointsAwarded > best.pointsAwarded ? a : best))
-            : null;
+
+          // Best run: fastest WPM with 95%+ accuracy, else 70%+, else any
+          const best95 = attempts.filter((a) => a.accuracy >= 95);
+          const best70 = attempts.filter((a) => a.accuracy >= 70);
+          const bestAttempt = (best95.length > 0 ? best95 : best70.length > 0 ? best70 : attempts)
+            .reduce<typeof attempts[number] | null>((best, a) => (!best || a.wpm > best.wpm ? a : best), null);
 
           return (
             <button
@@ -124,7 +127,7 @@ export default function LevelSelect({ profile, onSelectLevel, onLogout }: Props)
               <span className="level-name">{level.title}</span>
               {isCompleted && bestAttempt && (
                 <span className="level-score">
-                  {bestAttempt.pointsAwarded}pts · {bestAttempt.wpm}wpm
+                  {bestAttempt.wpm}wpm · {bestAttempt.accuracy}% · {bestAttempt.pointsAwarded}pts
                 </span>
               )}
               {!isUnlocked && <span className="lock-icon">🔒</span>}
