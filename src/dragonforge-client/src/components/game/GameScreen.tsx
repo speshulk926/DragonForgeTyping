@@ -15,11 +15,12 @@ interface Props {
   level: LevelDefinition;
   stage: EvolutionStage;
   highestLevelCompleted: number;
+  isOnline: boolean;
   onComplete: (result: LevelAttemptResult) => void;
   onBack: () => void;
 }
 
-export default function GameScreen({ level, stage, highestLevelCompleted, onComplete, onBack }: Props) {
+export default function GameScreen({ level, stage, highestLevelCompleted, isOnline, onComplete, onBack }: Props) {
   const promptText = level.promptTexts.join(" ");
   const { state, handleKeyDown, reset } = useTypingEngine(promptText);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -74,14 +75,16 @@ export default function GameScreen({ level, stage, highestLevelCompleted, onComp
         pointsAwarded: points,
         passed: state.isComplete && !state.isFailed,
       };
-      saveAttempt(attemptResult);
+      // Save to localStorage only in local mode
+      if (!isOnline) {
+        saveAttempt(attemptResult);
 
-      // Check for evolution
-      if (attemptResult.passed) {
-        const profile = getProfile();
-        if (profile) {
-          const evo = checkEvolution(profile);
-          if (evo) setPendingEvolution(evo);
+        if (attemptResult.passed) {
+          const profile = getProfile();
+          if (profile) {
+            const evo = checkEvolution(profile);
+            if (evo) setPendingEvolution(evo);
+          }
         }
       }
     }

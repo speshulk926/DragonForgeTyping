@@ -247,6 +247,7 @@ export default function App() {
       level={level}
       stage={profile.currentStage}
       highestLevelCompleted={profile.highestLevelCompleted}
+      isOnline={authMode === "online"}
       onComplete={handleLevelComplete}
       onBack={handleBackToLevels}
     />
