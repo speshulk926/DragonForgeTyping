@@ -32,7 +32,7 @@ public class AuthController(AuthService auth, AppDbContext db) : ControllerBase
     [Authorize]
     public async Task<IActionResult> GenerateChildCode([FromBody] GenerateOtpRequest req)
     {
-        var parentId = Guid.Parse(User.FindFirst("sub")!.Value);
+        var parentId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
         var child = await db.ChildProfiles
             .FirstOrDefaultAsync(c => c.Id == req.ChildId && c.ParentId == parentId);
 

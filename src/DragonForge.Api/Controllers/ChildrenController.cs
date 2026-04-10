@@ -12,7 +12,7 @@ namespace DragonForge.Api.Controllers;
 [Authorize]
 public class ChildrenController(AppDbContext db) : ControllerBase
 {
-    private Guid ParentId => Guid.Parse(User.FindFirst("sub")!.Value);
+    private Guid ParentId => Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
