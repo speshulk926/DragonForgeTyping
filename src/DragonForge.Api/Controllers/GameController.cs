@@ -114,23 +114,20 @@ public class GameController(AppDbContext db) : ControllerBase
 
         var totalPasses = passed.Count;
 
-        // Top 5 distinct levels for WPM/accuracy averaging
-        var topLevels = passed
-            .Select(a => a.LevelDefinitionId).Distinct()
-            .Take(5).ToHashSet();
-        var relevant = passed.Where(a => topLevels.Contains(a.LevelDefinitionId)).Take(10).ToList();
-        var avgWpm = relevant.Count >= 10 ? relevant.Average(a => (double)a.Wpm) : 0;
-        var avgAcc = relevant.Count >= 10 ? relevant.Average(a => (double)a.Accuracy) : 0;
+        // Average last 10 passed attempts (or fewer if not enough yet)
+        var recent = passed.Take(10).ToList();
+        var avgWpm = recent.Count > 0 ? recent.Average(a => (double)a.Wpm) : 0;
+        var avgAcc = recent.Count > 0 ? recent.Average(a => (double)a.Accuracy) : 0;
 
         foreach (var req in StageReqs)
         {
             if (totalPasses < req.MinPasses) continue;
-            if (req.MinWpm == null) // Hatchling — just needs passes + levels
+            if (req.MinWpm == null)
             {
                 if (child.HighestLevelCompleted >= req.MinPasses) return req.Stage;
                 continue;
             }
-            if (relevant.Count >= 10 && avgWpm >= req.MinWpm && avgAcc >= req.MinAcc)
+            if (avgWpm >= req.MinWpm && avgAcc >= req.MinAcc)
                 return req.Stage;
         }
 

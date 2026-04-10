@@ -19,43 +19,30 @@ export const STAGE_REQUIREMENTS: StageRequirement[] = [
   { stage: "InfernoDragon", label: "Inferno Dragon",  minPasses: 70,  minWpm: 90,   minAccuracy: 95 },
 ];
 
-function getRelevantAttempts(profile: PlayerProfile) {
+function getStats(profile: PlayerProfile) {
   const passed = profile.attempts.filter((a) => a.passed);
   if (passed.length === 0) return { totalPasses: 0, avgWpm: 0, avgAccuracy: 0 };
 
-  const distinctLevels = [...new Set(passed.map((a) => a.levelNumber))];
-  distinctLevels.sort((a, b) => b - a);
-  const topLevels = new Set(distinctLevels.slice(0, 5));
-  const relevant = passed.filter((a) => topLevels.has(a.levelNumber));
-  const last10 = relevant.slice(-10);
-
-  const avgWpm = last10.length > 0 ? last10.reduce((s, a) => s + a.wpm, 0) / last10.length : 0;
-  const avgAccuracy = last10.length > 0 ? last10.reduce((s, a) => s + a.accuracy, 0) / last10.length : 0;
+  // Average the last 10 passed attempts (or fewer if not enough yet)
+  const recent = passed.slice(-10);
+  const avgWpm = recent.reduce((s, a) => s + a.wpm, 0) / recent.length;
+  const avgAccuracy = recent.reduce((s, a) => s + a.accuracy, 0) / recent.length;
 
   return { totalPasses: passed.length, avgWpm, avgAccuracy };
 }
 
 function meetsRequirement(profile: PlayerProfile, req: StageRequirement): boolean {
-  const { totalPasses, avgWpm, avgAccuracy } = getRelevantAttempts(profile);
+  const { totalPasses, avgWpm, avgAccuracy } = getStats(profile);
 
   if (totalPasses < req.minPasses) return false;
 
-  // Hatchling only needs pass count (and level completion)
+  // Hatchling only needs pass count + level completion
   if (req.minWpm === null) return profile.highestLevelCompleted >= req.minPasses;
-
-  // Need enough relevant attempts for averaging
-  const passed = profile.attempts.filter((a) => a.passed);
-  const distinctLevels = [...new Set(passed.map((a) => a.levelNumber))];
-  distinctLevels.sort((a, b) => b - a);
-  const topLevels = new Set(distinctLevels.slice(0, 5));
-  const relevant = passed.filter((a) => topLevels.has(a.levelNumber));
-  if (relevant.length < 10) return false;
 
   return avgWpm >= req.minWpm && avgAccuracy >= (req.minAccuracy ?? 0);
 }
 
 export function computeStage(profile: PlayerProfile): EvolutionStage {
-  // Walk from highest to lowest, return first match
   for (let i = STAGE_REQUIREMENTS.length - 1; i >= 0; i--) {
     if (meetsRequirement(profile, STAGE_REQUIREMENTS[i])) {
       return STAGE_REQUIREMENTS[i].stage;
@@ -99,13 +86,11 @@ export function getEvolutionProgress(profile: PlayerProfile): EvolutionProgress 
   const next = getNextStageInfo(profile.currentStage);
   if (!next) return null;
 
-  const { totalPasses, avgWpm, avgAccuracy } = getRelevantAttempts(profile);
+  const { totalPasses, avgWpm, avgAccuracy } = getStats(profile);
 
   const passesPercent = Math.min(100, (totalPasses / next.minPasses) * 100);
   const wpmPercent = next.minWpm ? Math.min(100, (avgWpm / next.minWpm) * 100) : 100;
   const accuracyPercent = next.minAccuracy ? Math.min(100, (avgAccuracy / next.minAccuracy) * 100) : 100;
-
-  // Overall is the minimum of all requirements
   const overallPercent = Math.min(passesPercent, wpmPercent, accuracyPercent);
 
   return {
