@@ -3,15 +3,18 @@ import { getProfile, createProfile, clearProfile, saveProfile } from "./services
 import { getLevelByNumber } from "./services/levels";
 import { checkEvolution } from "./services/evolution";
 import {
-  isChildLoggedIn, getGameProfile, submitAttempt as apiSubmitAttempt,
+  isChildLoggedIn, isParentLoggedIn, getGameProfile,
+  submitAttempt as apiSubmitAttempt,
   childLogout, clearChildSession,
 } from "./services/api";
 import type { PlayerProfile, LevelAttemptResult, EvolutionStage } from "./types/game";
 import NameEntry from "./components/auth/NameEntry";
+import ParentAuth from "./components/auth/ParentAuth";
 import LevelSelect from "./components/game/LevelSelect";
 import GameScreen from "./components/game/GameScreen";
+import ParentDashboard from "./components/parent/ParentDashboard";
 
-type Screen = "name" | "levels" | "game";
+type Screen = "name" | "levels" | "game" | "parentAuth" | "parentDashboard";
 type AuthMode = "local" | "online";
 
 export default function App() {
@@ -20,26 +23,24 @@ export default function App() {
   const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(1);
   const [authMode, setAuthMode] = useState<AuthMode>("local");
 
-  // Check for existing sessions on mount
   useEffect(() => {
-    if (isChildLoggedIn()) {
-      // Try to load online profile
+    if (isParentLoggedIn()) {
+      setScreen("parentDashboard");
+    } else if (isChildLoggedIn()) {
       getGameProfile()
         .then((data) => {
-          const onlineProfile: PlayerProfile = {
+          setProfile({
             name: data.displayName,
             highestLevelCompleted: data.highestLevelCompleted,
             totalPoints: data.totalPoints,
             currentStage: data.currentStage as EvolutionStage,
             attempts: [],
-          };
-          setProfile(onlineProfile);
+          });
           setAuthMode("online");
           setScreen("levels");
         })
         .catch(() => {
           clearChildSession();
-          // Fall back to local
           checkLocalProfile();
         });
     } else {
@@ -56,7 +57,6 @@ export default function App() {
     }
   }
 
-  // Local mode: enter name
   const handleNameSubmit = useCallback((name: string) => {
     const p = createProfile(name);
     setProfile(p);
@@ -64,17 +64,15 @@ export default function App() {
     setScreen("levels");
   }, []);
 
-  // Online mode: child OTP login succeeded
   const handleChildLogin = useCallback((displayName: string) => {
     getGameProfile().then((data) => {
-      const onlineProfile: PlayerProfile = {
+      setProfile({
         name: displayName,
         highestLevelCompleted: data.highestLevelCompleted,
         totalPoints: data.totalPoints,
         currentStage: data.currentStage as EvolutionStage,
         attempts: [],
-      };
-      setProfile(onlineProfile);
+      });
       setAuthMode("online");
       setScreen("levels");
     });
@@ -88,7 +86,6 @@ export default function App() {
   const handleLevelComplete = useCallback(
     (result: LevelAttemptResult) => {
       if (authMode === "online") {
-        // Save to API, then refresh profile
         apiSubmitAttempt({
           levelNumber: result.levelNumber,
           wpm: result.wpm,
@@ -107,7 +104,6 @@ export default function App() {
           );
         }).catch(() => {});
       } else {
-        // Local mode
         const updated = getProfile();
         if (updated) {
           const evo = checkEvolution(updated);
@@ -149,11 +145,30 @@ export default function App() {
     setScreen("levels");
   }, [authMode]);
 
+  // Parent auth screen
+  if (screen === "parentAuth") {
+    return (
+      <ParentAuth
+        onSuccess={() => setScreen("parentDashboard")}
+        onBack={() => setScreen("name")}
+      />
+    );
+  }
+
+  // Parent dashboard
+  if (screen === "parentDashboard") {
+    return (
+      <ParentDashboard onLogout={() => setScreen("name")} />
+    );
+  }
+
+  // Child/local name entry
   if (screen === "name" || !profile) {
     return (
       <NameEntry
         onSubmit={handleNameSubmit}
         onChildLogin={handleChildLogin}
+        onParentLogin={() => setScreen("parentAuth")}
       />
     );
   }

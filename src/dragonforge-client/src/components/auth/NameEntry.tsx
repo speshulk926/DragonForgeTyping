@@ -5,9 +5,10 @@ import DragonAvatar from "../shared/DragonAvatar";
 interface Props {
   onSubmit: (name: string) => void;
   onChildLogin: (displayName: string) => void;
+  onParentLogin: () => void;
 }
 
-export default function NameEntry({ onSubmit, onChildLogin }: Props) {
+export default function NameEntry({ onSubmit, onChildLogin, onParentLogin }: Props) {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<"choose" | "local" | "code">("choose");
   const [code, setCode] = useState("");
@@ -54,6 +55,9 @@ export default function NameEntry({ onSubmit, onChildLogin }: Props) {
             <p className="login-hint">
               Have a code from a parent? Use "Enter Login Code" to save your progress online.
             </p>
+            <button className="parent-login-link" onClick={onParentLogin}>
+              Parent Login
+            </button>
           </div>
         )}
 

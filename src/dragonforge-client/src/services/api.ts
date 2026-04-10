@@ -49,6 +49,13 @@ async function parentFetch(path: string, options: RequestInit = {}) {
   return res;
 }
 
+export async function parentFetchJson(path: string, options: RequestInit = {}) {
+  const res = await parentFetch(path, options);
+  if (!res.ok) throw new Error("Request failed");
+  if (options.method === "DELETE") return;
+  return res.json();
+}
+
 async function childFetch(path: string, options: RequestInit = {}) {
   const session = getChildSession();
   const res = await fetch(`${API_BASE}${path}`, {
