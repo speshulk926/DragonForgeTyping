@@ -11,13 +11,77 @@ interface Props {
   currentLevelNumber: number;
 }
 
-// Colors for parallax layers
-const SKY_GRADIENT_TOP = "#1a0a2e";
-const SKY_GRADIENT_BOTTOM = "#2d1b69";
-const MOUNTAIN_COLOR = "#2a1a4e";
-const HILL_COLOR = "#3d2b6b";
-const GROUND_COLOR = "#4a3580";
-const PATH_COLOR = "#6b4f9e";
+interface Biome {
+  skyTop: string;
+  skyBottom: string;
+  mountain: string;
+  hill: string;
+  ground: string;
+  path: string;
+  stars: string;
+  textColor: string;
+  textGlow: string;
+  particles?: (ctx: CanvasRenderingContext2D, W: number, H: number, frame: number, scrollX: number) => void;
+}
+
+const BIOME_FOREST: Biome = {
+  skyTop: "#0a1a0a", skyBottom: "#1a3a1a",
+  mountain: "#0d2a0d", hill: "#1a4a1a",
+  ground: "#2a5a2a", path: "#4a7a3a",
+  stars: "#ffffff22", textColor: "#aaee66", textGlow: "#44aa22",
+};
+
+const BIOME_MOUNTAINS: Biome = {
+  skyTop: "#1a0a2e", skyBottom: "#2d1b69",
+  mountain: "#2a1a4e", hill: "#3d2b6b",
+  ground: "#4a3580", path: "#6b4f9e",
+  stars: "#ffffff44", textColor: "#ffd700", textGlow: "#ff6b35",
+};
+
+const BIOME_VOLCANIC: Biome = {
+  skyTop: "#1a0500", skyBottom: "#3a1008",
+  mountain: "#2a0a04", hill: "#4a1a0a",
+  ground: "#3a2010", path: "#6a3a1a",
+  stars: "#ff660022", textColor: "#ffaa33", textGlow: "#ff4400",
+  particles: (ctx, W, H, frame) => {
+    // Floating embers
+    for (let i = 0; i < 12; i++) {
+      const age = (frame * 0.5 + i * 23) % 60;
+      const px = (i * 173 + frame * 0.3) % W;
+      const py = H * 0.7 - age * H * 0.01;
+      const alpha = Math.max(0, 0.6 - age / 60);
+      const size = 1.5 + Math.sin(i) * 0.5;
+      ctx.fillStyle = i % 2 === 0 ? `rgba(255, 100, 20, ${alpha})` : `rgba(255, 200, 50, ${alpha})`;
+      ctx.fillRect(px, py, size, size);
+    }
+  },
+};
+
+const BIOME_SKY_CASTLE: Biome = {
+  skyTop: "#0a0a2e", skyBottom: "#2244aa",
+  mountain: "#1a2a6a", hill: "#2a3a8a",
+  ground: "#bbccee", path: "#dde4ff",
+  stars: "#ffffff66", textColor: "#ffffff", textGlow: "#88bbff",
+  particles: (ctx, W, H, frame) => {
+    // Drifting clouds
+    for (let i = 0; i < 6; i++) {
+      const cx = (i * 200 + frame * 0.2) % (W + 100) - 50;
+      const cy = H * 0.15 + (i * 47) % (H * 0.3);
+      const alpha = 0.12 + Math.sin(i * 2) * 0.04;
+      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 40 + i * 8, 12 + i * 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+};
+
+function getBiome(levelNumber: number): Biome {
+  if (levelNumber <= 15) return BIOME_FOREST;
+  if (levelNumber <= 30) return BIOME_MOUNTAINS;
+  if (levelNumber <= 48) return BIOME_VOLCANIC;
+  return BIOME_SKY_CASTLE;
+}
 
 export default function Runner({ progress, isStumbling, promptText, currentIndex, stage, highestLevelCompleted, currentLevelNumber }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -61,16 +125,17 @@ export default function Runner({ progress, isStumbling, promptText, currentIndex
       if (frameRef.current % 3 === 0) runFrame.current++;
 
       const scrollX = progress * 2000;
+      const biome = getBiome(currentLevelNumber);
 
       // Sky gradient
       const grad = ctx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0, SKY_GRADIENT_TOP);
-      grad.addColorStop(1, SKY_GRADIENT_BOTTOM);
+      grad.addColorStop(0, biome.skyTop);
+      grad.addColorStop(1, biome.skyBottom);
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, W, H);
 
-      // Stars
-      ctx.fillStyle = "#ffffff44";
+      // Stars / sky particles
+      ctx.fillStyle = biome.stars;
       for (let i = 0; i < 30; i++) {
         const sx = ((i * 137 + 50) % W + scrollX * 0.02) % W;
         const sy = (i * 97 + 20) % (H * 0.5);
@@ -78,20 +143,23 @@ export default function Runner({ progress, isStumbling, promptText, currentIndex
       }
 
       // Mountains (parallax layer 1)
-      drawMountains(ctx, scrollX * 0.1, MOUNTAIN_COLOR, H * 0.53, H * 0.27, W, H);
+      drawMountains(ctx, scrollX * 0.1, biome.mountain, H * 0.53, H * 0.27, W, H);
       // Hills (parallax layer 2)
-      drawHills(ctx, scrollX * 0.3, HILL_COLOR, H * 0.63, H * 0.17, W, H);
+      drawHills(ctx, scrollX * 0.3, biome.hill, H * 0.63, H * 0.17, W, H);
+
+      // Biome-specific atmospheric particles
+      biome.particles?.(ctx, W, H, frameRef.current, scrollX);
 
       // Ground
-      ctx.fillStyle = GROUND_COLOR;
+      ctx.fillStyle = biome.ground;
       ctx.fillRect(0, groundY, W, H - groundY);
 
       // Path
-      ctx.fillStyle = PATH_COLOR;
+      ctx.fillStyle = biome.path;
       ctx.fillRect(0, groundY, W, 8);
 
       // Text on path
-      drawPathText(ctx, promptText, currentIndex, W, groundY);
+      drawPathText(ctx, promptText, currentIndex, W, groundY, biome);
 
       // Characters
       const bobY = Math.sin(runFrame.current * 0.3) * 3;
@@ -740,13 +808,14 @@ function drawPathText(
   text: string,
   currentIndex: number,
   W: number,
-  groundY: number
+  groundY: number,
+  biome: Biome
 ) {
   const upcoming = text.slice(currentIndex, currentIndex + 40);
   const fontSize = Math.max(12, Math.min(16, W * 0.014));
   ctx.font = `${fontSize}px "Press Start 2P", monospace`;
-  ctx.fillStyle = "#ffd700";
-  ctx.shadowColor = "#ff6b35";
+  ctx.fillStyle = biome.textColor;
+  ctx.shadowColor = biome.textGlow;
   ctx.shadowBlur = 8;
 
   let drawX = W * 0.25;
