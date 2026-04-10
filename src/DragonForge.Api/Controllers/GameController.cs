@@ -14,12 +14,32 @@ public class GameController(AppDbContext db) : ControllerBase
     private ChildProfile? Child => HttpContext.GetChildProfile();
 
     [HttpGet("profile")]
-    public IActionResult GetProfile()
+    public async Task<IActionResult> GetProfile()
     {
         if (Child == null) return Unauthorized(new { error = "Invalid session" });
-        return Ok(new GameProfileResponse(
-            Child.Id, Child.DisplayName, Child.CurrentStage.ToString(),
-            Child.TotalPoints, Child.HighestLevelCompleted));
+
+        var attempts = await db.LevelAttempts
+            .Where(a => a.ChildProfileId == Child.Id)
+            .Include(a => a.LevelDefinition)
+            .OrderBy(a => a.CompletedAt)
+            .Select(a => new {
+                a.LevelDefinition.LevelNumber,
+                Wpm = (double)a.Wpm,
+                Accuracy = (double)a.Accuracy,
+                a.HeartsRemaining,
+                a.PointsAwarded,
+                a.Passed,
+            })
+            .ToListAsync();
+
+        return Ok(new {
+            Child.Id,
+            Child.DisplayName,
+            CurrentStage = Child.CurrentStage.ToString(),
+            Child.TotalPoints,
+            Child.HighestLevelCompleted,
+            Attempts = attempts,
+        });
     }
 
     [HttpPost("attempt")]

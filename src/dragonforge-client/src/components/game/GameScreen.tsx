@@ -17,10 +17,11 @@ interface Props {
   highestLevelCompleted: number;
   isOnline: boolean;
   onComplete: (result: LevelAttemptResult) => void;
+  onAdvance: () => void;
   onBack: () => void;
 }
 
-export default function GameScreen({ level, stage, highestLevelCompleted, isOnline, onComplete, onBack }: Props) {
+export default function GameScreen({ level, stage, highestLevelCompleted, isOnline, onComplete, onAdvance, onBack }: Props) {
   const promptText = level.promptTexts.join(" ");
   const { state, handleKeyDown, reset } = useTypingEngine(promptText);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -60,9 +61,11 @@ export default function GameScreen({ level, stage, highestLevelCompleted, isOnli
     prevCorrect.current = state.correctCount;
   }, [state.correctCount]);
 
-  // Handle level completion
+  // Handle level completion — save immediately
+  const savedRef = useRef(false);
   useEffect(() => {
-    if (state.isComplete || state.isFailed) {
+    if ((state.isComplete || state.isFailed) && !savedRef.current) {
+      savedRef.current = true;
       const { points, badge } = state.isFailed
         ? { points: 0, badge: null }
         : calculatePoints(state.accuracy, level.basePoints);
@@ -76,10 +79,10 @@ export default function GameScreen({ level, stage, highestLevelCompleted, isOnli
         pointsAwarded: points,
         passed: state.isComplete && !state.isFailed,
       };
-      // Save to localStorage only in local mode
+
+      // Save immediately — both localStorage (local mode) and notify App
       if (!isOnline) {
         saveAttempt(attemptResult);
-
         if (attemptResult.passed) {
           const profile = getProfile();
           if (profile) {
@@ -88,29 +91,24 @@ export default function GameScreen({ level, stage, highestLevelCompleted, isOnli
           }
         }
       }
+
+      // Always notify App so profile state gets updated
+      onComplete(attemptResult);
     }
   }, [state.isComplete, state.isFailed]);
 
   const handleRetry = useCallback(() => {
     setResult(null);
     setPendingEvolution(null);
+    savedRef.current = false;
     prevIncorrect.current = 0;
     reset();
     inputRef.current?.focus();
   }, [reset]);
 
   const handleNext = useCallback(() => {
-    if (!result) return;
-    const attemptResult: LevelAttemptResult = {
-      levelNumber: level.levelNumber,
-      wpm: state.wpm,
-      accuracy: state.accuracy,
-      heartsRemaining: state.hearts,
-      pointsAwarded: result.points,
-      passed: true,
-    };
-    onComplete(attemptResult);
-  }, [result, state, level, onComplete]);
+    onAdvance();
+  }, [onAdvance]);
 
   const handleEvolutionContinue = useCallback(() => {
     setPendingEvolution(null);

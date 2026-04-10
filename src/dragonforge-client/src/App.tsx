@@ -24,19 +24,31 @@ export default function App() {
   const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(1);
   const [authMode, setAuthMode] = useState<AuthMode>("local");
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function profileFromApi(data: any): PlayerProfile {
+    return {
+      name: data.displayName,
+      highestLevelCompleted: data.highestLevelCompleted,
+      totalPoints: data.totalPoints,
+      currentStage: data.currentStage as EvolutionStage,
+      attempts: (data.attempts ?? []).map((a: any) => ({
+        levelNumber: a.levelNumber,
+        wpm: a.wpm,
+        accuracy: a.accuracy,
+        heartsRemaining: a.heartsRemaining ?? 0,
+        pointsAwarded: a.pointsAwarded,
+        passed: a.passed,
+      })),
+    };
+  }
+
   useEffect(() => {
     if (isParentLoggedIn()) {
       setScreen("parentDashboard");
     } else if (isChildLoggedIn()) {
       getGameProfile()
         .then((data) => {
-          setProfile({
-            name: data.displayName,
-            highestLevelCompleted: data.highestLevelCompleted,
-            totalPoints: data.totalPoints,
-            currentStage: data.currentStage as EvolutionStage,
-            attempts: [],
-          });
+          setProfile(profileFromApi(data));
           setAuthMode("online");
           setScreen("levels");
         })
@@ -67,13 +79,7 @@ export default function App() {
 
   const handleChildLogin = useCallback((displayName: string) => {
     getGameProfile().then((data) => {
-      setProfile({
-        name: displayName,
-        highestLevelCompleted: data.highestLevelCompleted,
-        totalPoints: data.totalPoints,
-        currentStage: data.currentStage as EvolutionStage,
-        attempts: [],
-      });
+      setProfile(profileFromApi({ ...data, displayName }));
       setAuthMode("online");
       if (!localStorage.getItem("df_tutorial_done") && data.highestLevelCompleted === 0) {
         setScreen("tutorial");
@@ -88,6 +94,7 @@ export default function App() {
     setScreen("game");
   }, []);
 
+  // Called immediately when a level finishes — saves the attempt
   const handleLevelComplete = useCallback(
     (result: LevelAttemptResult) => {
       if (authMode === "online") {
@@ -105,6 +112,7 @@ export default function App() {
               totalPoints: data.totalPoints ?? prev.totalPoints,
               highestLevelCompleted: data.highestLevelCompleted ?? prev.highestLevelCompleted,
               currentStage: (data.stage as EvolutionStage) ?? prev.currentStage,
+              attempts: [...prev.attempts, result],
             } : prev
           );
         }).catch(() => {});
@@ -119,17 +127,20 @@ export default function App() {
           setProfile(updated);
         }
       }
-
-      const nextLevel = currentLevelNumber + 1;
-      const nextDef = getLevelByNumber(nextLevel);
-      if (nextDef) {
-        setCurrentLevelNumber(nextLevel);
-      } else {
-        setScreen("levels");
-      }
     },
-    [currentLevelNumber, authMode]
+    [authMode]
   );
+
+  // Called when "Next Level" is clicked
+  const handleAdvanceLevel = useCallback(() => {
+    const nextLevel = currentLevelNumber + 1;
+    const nextDef = getLevelByNumber(nextLevel);
+    if (nextDef) {
+      setCurrentLevelNumber(nextLevel);
+    } else {
+      setScreen("levels");
+    }
+  }, [currentLevelNumber]);
 
   const handleLogout = useCallback(() => {
     if (authMode === "online") {
@@ -151,12 +162,7 @@ export default function App() {
   const handleBackToLevels = useCallback(() => {
     if (authMode === "online") {
       getGameProfile().then((data) => {
-        setProfile((prev) => prev ? {
-          ...prev,
-          highestLevelCompleted: data.highestLevelCompleted,
-          totalPoints: data.totalPoints,
-          currentStage: data.currentStage as EvolutionStage,
-        } : prev);
+        setProfile(profileFromApi(data));
       }).catch(() => {});
     } else {
       const updated = getProfile();
@@ -195,13 +201,7 @@ export default function App() {
         onPlay={() => {
           // Parent just got a child session via parentPlay() — load their game profile
           getGameProfile().then((data) => {
-            setProfile({
-              name: data.displayName,
-              highestLevelCompleted: data.highestLevelCompleted,
-              totalPoints: data.totalPoints,
-              currentStage: data.currentStage as EvolutionStage,
-              attempts: [],
-            });
+            setProfile(profileFromApi(data));
             setAuthMode("online");
             setScreen("levels");
           });
@@ -249,6 +249,7 @@ export default function App() {
       highestLevelCompleted={profile.highestLevelCompleted}
       isOnline={authMode === "online"}
       onComplete={handleLevelComplete}
+      onAdvance={handleAdvanceLevel}
       onBack={handleBackToLevels}
     />
   );
