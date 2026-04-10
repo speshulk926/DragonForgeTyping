@@ -2,30 +2,82 @@ import { useState, useCallback, useEffect } from "react";
 import { getProfile, createProfile, clearProfile, saveProfile } from "./services/storage";
 import { getLevelByNumber } from "./services/levels";
 import { checkEvolution } from "./services/evolution";
-import type { PlayerProfile, LevelAttemptResult } from "./types/game";
+import {
+  isChildLoggedIn, getGameProfile, submitAttempt as apiSubmitAttempt,
+  childLogout, clearChildSession,
+} from "./services/api";
+import type { PlayerProfile, LevelAttemptResult, EvolutionStage } from "./types/game";
 import NameEntry from "./components/auth/NameEntry";
 import LevelSelect from "./components/game/LevelSelect";
 import GameScreen from "./components/game/GameScreen";
 
 type Screen = "name" | "levels" | "game";
+type AuthMode = "local" | "online";
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("name");
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(1);
+  const [authMode, setAuthMode] = useState<AuthMode>("local");
 
+  // Check for existing sessions on mount
   useEffect(() => {
-    const existing = getProfile();
-    if (existing) {
-      setProfile(existing);
-      setScreen("levels");
+    if (isChildLoggedIn()) {
+      // Try to load online profile
+      getGameProfile()
+        .then((data) => {
+          const onlineProfile: PlayerProfile = {
+            name: data.displayName,
+            highestLevelCompleted: data.highestLevelCompleted,
+            totalPoints: data.totalPoints,
+            currentStage: data.currentStage as EvolutionStage,
+            attempts: [],
+          };
+          setProfile(onlineProfile);
+          setAuthMode("online");
+          setScreen("levels");
+        })
+        .catch(() => {
+          clearChildSession();
+          // Fall back to local
+          checkLocalProfile();
+        });
+    } else {
+      checkLocalProfile();
     }
   }, []);
 
+  function checkLocalProfile() {
+    const existing = getProfile();
+    if (existing) {
+      setProfile(existing);
+      setAuthMode("local");
+      setScreen("levels");
+    }
+  }
+
+  // Local mode: enter name
   const handleNameSubmit = useCallback((name: string) => {
     const p = createProfile(name);
     setProfile(p);
+    setAuthMode("local");
     setScreen("levels");
+  }, []);
+
+  // Online mode: child OTP login succeeded
+  const handleChildLogin = useCallback((displayName: string) => {
+    getGameProfile().then((data) => {
+      const onlineProfile: PlayerProfile = {
+        name: displayName,
+        highestLevelCompleted: data.highestLevelCompleted,
+        totalPoints: data.totalPoints,
+        currentStage: data.currentStage as EvolutionStage,
+        attempts: [],
+      };
+      setProfile(onlineProfile);
+      setAuthMode("online");
+      setScreen("levels");
+    });
   }, []);
 
   const handleSelectLevel = useCallback((levelNumber: number) => {
@@ -34,17 +86,39 @@ export default function App() {
   }, []);
 
   const handleLevelComplete = useCallback(
-    (_result: LevelAttemptResult) => {
-      const updated = getProfile();
-      if (updated) {
-        // Apply evolution if earned
-        const evo = checkEvolution(updated);
-        if (evo) {
-          updated.currentStage = evo;
-          saveProfile(updated);
+    (result: LevelAttemptResult) => {
+      if (authMode === "online") {
+        // Save to API, then refresh profile
+        apiSubmitAttempt({
+          levelNumber: result.levelNumber,
+          wpm: result.wpm,
+          accuracy: result.accuracy,
+          heartsRemaining: result.heartsRemaining,
+          pointsAwarded: result.pointsAwarded,
+          passed: result.passed,
+        }).then((data) => {
+          setProfile((prev) =>
+            prev ? {
+              ...prev,
+              totalPoints: data.totalPoints ?? prev.totalPoints,
+              highestLevelCompleted: data.highestLevelCompleted ?? prev.highestLevelCompleted,
+              currentStage: (data.stage as EvolutionStage) ?? prev.currentStage,
+            } : prev
+          );
+        }).catch(() => {});
+      } else {
+        // Local mode
+        const updated = getProfile();
+        if (updated) {
+          const evo = checkEvolution(updated);
+          if (evo) {
+            updated.currentStage = evo;
+            saveProfile(updated);
+          }
+          setProfile(updated);
         }
-        setProfile(updated);
       }
+
       const nextLevel = currentLevelNumber + 1;
       const nextDef = getLevelByNumber(nextLevel);
       if (nextDef) {
@@ -53,23 +127,35 @@ export default function App() {
         setScreen("levels");
       }
     },
-    [currentLevelNumber]
+    [currentLevelNumber, authMode]
   );
 
   const handleLogout = useCallback(() => {
-    clearProfile();
+    if (authMode === "online") {
+      childLogout();
+    } else {
+      clearProfile();
+    }
     setProfile(null);
+    setAuthMode("local");
     setScreen("name");
-  }, []);
+  }, [authMode]);
 
   const handleBackToLevels = useCallback(() => {
-    const updated = getProfile();
-    if (updated) setProfile(updated);
+    if (authMode === "local") {
+      const updated = getProfile();
+      if (updated) setProfile(updated);
+    }
     setScreen("levels");
-  }, []);
+  }, [authMode]);
 
   if (screen === "name" || !profile) {
-    return <NameEntry onSubmit={handleNameSubmit} />;
+    return (
+      <NameEntry
+        onSubmit={handleNameSubmit}
+        onChildLogin={handleChildLogin}
+      />
+    );
   }
 
   if (screen === "levels") {
