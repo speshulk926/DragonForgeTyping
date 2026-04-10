@@ -8,6 +8,7 @@ interface Props {
   currentIndex: number;
   stage: EvolutionStage;
   highestLevelCompleted: number;
+  currentLevelNumber: number;
 }
 
 // Colors for parallax layers
@@ -18,7 +19,7 @@ const HILL_COLOR = "#3d2b6b";
 const GROUND_COLOR = "#4a3580";
 const PATH_COLOR = "#6b4f9e";
 
-export default function Runner({ progress, isStumbling, promptText, currentIndex, stage, highestLevelCompleted }: Props) {
+export default function Runner({ progress, isStumbling, promptText, currentIndex, stage, highestLevelCompleted, currentLevelNumber }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stumbleTimer = useRef<number>(0);
   const frameRef = useRef<number>(0);
@@ -92,21 +93,39 @@ export default function Runner({ progress, isStumbling, promptText, currentIndex
       // Text on path
       drawPathText(ctx, promptText, currentIndex, W, groundY);
 
-      // Character
-      const charX = W * 0.15;
+      // Characters
       const bobY = Math.sin(runFrame.current * 0.3) * 3;
-
       const isStumble = stumbleTimer.current > 0;
       if (isStumble) stumbleTimer.current--;
 
-      drawStageCharacter(ctx, stage, charX, groundY - charSize + bobY, runFrame.current, charSize, isStumble, highestLevelCompleted);
+      const showCompanion = stage !== "Egg";
+      if (showCompanion) {
+        // Dragon + Jimothy side by side
+        const jimothyInFront = currentLevelNumber <= 10;
+        const frontX = W * 0.18;
+        const backX = W * 0.06;
+
+        if (jimothyInFront) {
+          // Jimothy runs in front, dragon chases behind
+          drawJimothyCompanion(ctx, frontX, groundY - charSize + bobY, runFrame.current, charSize, isStumble);
+          drawStageCharacter(ctx, stage, backX, groundY - charSize + bobY, runFrame.current, charSize, isStumble, highestLevelCompleted);
+        } else {
+          // Dragon leads, Jimothy follows
+          drawStageCharacter(ctx, stage, frontX, groundY - charSize + bobY, runFrame.current, charSize, isStumble, highestLevelCompleted);
+          drawJimothyCompanion(ctx, backX, groundY - charSize + bobY, runFrame.current, charSize, isStumble);
+        }
+      } else {
+        // Egg stage — just Jimothy with egg
+        const charX = W * 0.15;
+        drawStageCharacter(ctx, stage, charX, groundY - charSize + bobY, runFrame.current, charSize, isStumble, highestLevelCompleted);
+      }
 
       animId = requestAnimationFrame(draw);
     };
 
     animId = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animId);
-  }, [progress, isStumbling, promptText, currentIndex, stage, highestLevelCompleted]);
+  }, [progress, isStumbling, promptText, currentIndex, stage, highestLevelCompleted, currentLevelNumber]);
 
   return (
     <canvas
@@ -182,6 +201,39 @@ function drawStageCharacter(
       drawInfernoDragon(ctx, sx, y, frame, size, isStumble);
       break;
   }
+}
+
+function drawJimothyCompanion(ctx: CanvasRenderingContext2D, x: number, y: number, frame: number, size: number, isStumble: boolean) {
+  const s = size / 40;
+  const legOffset = isStumble ? 0 : Math.sin(frame * 0.4) * 6 * s;
+  const shake = isStumble ? Math.random() * 3 - 1.5 : 0;
+
+  // Body
+  ctx.fillStyle = "#e8a87c";
+  ctx.fillRect(x + 8 * s + shake, y + 4 * s, 24 * s, 20 * s);
+  // Hood/head
+  ctx.fillStyle = "#8b4513";
+  ctx.fillRect(x + 10 * s + shake, y - 8 * s, 20 * s, 14 * s);
+  // Eyes
+  if (isStumble) {
+    ctx.fillStyle = "#ff0000";
+    ctx.font = `${8 * s}px monospace`;
+    ctx.fillText("×", x + 24 * s + shake, y + 2 * s);
+  } else {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(x + 24 * s, y - 2 * s, 4 * s, 4 * s);
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(x + 26 * s, y - 1 * s, 2 * s, 2 * s);
+  }
+  // Arms (swinging)
+  ctx.fillStyle = "#e8a87c";
+  const armSwing = Math.sin(frame * 0.4) * 4 * s;
+  ctx.fillRect(x + 4 * s + shake, y + 8 * s + armSwing, 6 * s, 4 * s);
+  ctx.fillRect(x + 28 * s + shake, y + 8 * s - armSwing, 6 * s, 4 * s);
+  // Legs
+  ctx.fillStyle = "#654321";
+  ctx.fillRect(x + 10 * s + shake, y + 24 * s, 6 * s, 12 * s + legOffset);
+  ctx.fillRect(x + 24 * s + shake, y + 24 * s, 6 * s, 12 * s - legOffset);
 }
 
 function drawEggRunner(ctx: CanvasRenderingContext2D, x: number, y: number, frame: number, size: number, isStumble: boolean, cracks: number) {

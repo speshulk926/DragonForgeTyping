@@ -13,8 +13,9 @@ import ParentAuth from "./components/auth/ParentAuth";
 import LevelSelect from "./components/game/LevelSelect";
 import GameScreen from "./components/game/GameScreen";
 import ParentDashboard from "./components/parent/ParentDashboard";
+import Tutorial from "./components/game/Tutorial";
 
-type Screen = "name" | "levels" | "game" | "parentAuth" | "parentDashboard";
+type Screen = "name" | "tutorial" | "levels" | "game" | "parentAuth" | "parentDashboard";
 type AuthMode = "local" | "online";
 
 export default function App() {
@@ -61,7 +62,12 @@ export default function App() {
     const p = createProfile(name);
     setProfile(p);
     setAuthMode("local");
-    setScreen("levels");
+    // Show tutorial for brand new players
+    if (!localStorage.getItem("df_tutorial_done")) {
+      setScreen("tutorial");
+    } else {
+      setScreen("levels");
+    }
   }, []);
 
   const handleChildLogin = useCallback((displayName: string) => {
@@ -74,7 +80,11 @@ export default function App() {
         attempts: [],
       });
       setAuthMode("online");
-      setScreen("levels");
+      if (!localStorage.getItem("df_tutorial_done") && data.highestLevelCompleted === 0) {
+        setScreen("tutorial");
+      } else {
+        setScreen("levels");
+      }
     });
   }, []);
 
@@ -144,6 +154,18 @@ export default function App() {
     }
     setScreen("levels");
   }, [authMode]);
+
+  // Tutorial
+  if (screen === "tutorial") {
+    return (
+      <Tutorial
+        onComplete={() => {
+          localStorage.setItem("df_tutorial_done", "1");
+          setScreen("levels");
+        }}
+      />
+    );
+  }
 
   // Parent auth screen
   if (screen === "parentAuth") {

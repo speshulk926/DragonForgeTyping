@@ -143,6 +143,7 @@ export default function GameScreen({ level, stage, highestLevelCompleted, onComp
         currentIndex={state.currentIndex}
         stage={stage}
         highestLevelCompleted={highestLevelCompleted}
+        currentLevelNumber={level.levelNumber}
       />
 
       {/* Typing Area */}
