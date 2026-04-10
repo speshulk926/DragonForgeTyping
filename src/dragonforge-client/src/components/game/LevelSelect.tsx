@@ -1,7 +1,10 @@
+import { useState, useEffect, useRef } from "react";
 import { getAllLevels } from "../../services/levels";
 import { getStageInfo, getEvolutionProgress } from "../../services/evolution";
 import type { PlayerProfile } from "../../types/game";
 import DragonAvatar from "../shared/DragonAvatar";
+
+const KONAMI = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
 
 interface Props {
   profile: PlayerProfile;
@@ -12,6 +15,24 @@ interface Props {
 export default function LevelSelect({ profile, onSelectLevel, onLogout }: Props) {
   const levels = getAllLevels();
   const progress = getEvolutionProgress(profile);
+  const [allUnlocked, setAllUnlocked] = useState(false);
+  const konamiIndex = useRef(0);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === KONAMI[konamiIndex.current]) {
+        konamiIndex.current++;
+        if (konamiIndex.current === KONAMI.length) {
+          setAllUnlocked((prev) => !prev);
+          konamiIndex.current = 0;
+        }
+      } else {
+        konamiIndex.current = 0;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   return (
     <div className="level-select-screen">
@@ -66,7 +87,7 @@ export default function LevelSelect({ profile, onSelectLevel, onLogout }: Props)
 
       <div className="level-grid">
         {levels.map((level) => {
-          const isUnlocked = level.levelNumber <= profile.highestLevelCompleted + 1;
+          const isUnlocked = allUnlocked || level.levelNumber <= profile.highestLevelCompleted + 1;
           const isCompleted = level.levelNumber <= profile.highestLevelCompleted;
 
           const attempts = profile.attempts.filter(
