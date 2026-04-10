@@ -21,6 +21,10 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Build artifacts
+publish/
+deploy.zip
+
 # Env
 .env
 .env.*
