@@ -177,3 +177,50 @@ export async function submitAttempt(data: {
   });
   return res.json();
 }
+
+// === Admin ===
+
+const ADMIN_KEY_STORAGE = "df_admin_key";
+
+export function getAdminKey(): string | null {
+  return sessionStorage.getItem(ADMIN_KEY_STORAGE);
+}
+
+export function setAdminKey(key: string) {
+  sessionStorage.setItem(ADMIN_KEY_STORAGE, key);
+}
+
+export function clearAdminKey() {
+  sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+}
+
+async function adminFetch(path: string) {
+  const key = getAdminKey();
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: key ? { "X-Admin-Key": key } : {},
+  });
+  if (res.status === 401) {
+    clearAdminKey();
+    throw new Error("Invalid admin key");
+  }
+  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  return res.json();
+}
+
+export async function adminVerifyKey(key: string) {
+  const res = await fetch(`${API_BASE}/api/admin/overview`, {
+    headers: { "X-Admin-Key": key },
+  });
+  if (res.status === 401) throw new Error("Invalid admin key");
+  if (!res.ok) throw new Error(`Server error (${res.status})`);
+  setAdminKey(key);
+  return res.json();
+}
+
+export const adminApi = {
+  overview: () => adminFetch("/api/admin/overview"),
+  parents: () => adminFetch("/api/admin/parents"),
+  levels: () => adminFetch("/api/admin/levels"),
+  activity: (days = 30) => adminFetch(`/api/admin/activity?days=${days}`),
+  childDetail: (id: string) => adminFetch(`/api/admin/children/${id}`),
+};

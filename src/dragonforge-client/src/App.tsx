@@ -14,11 +14,21 @@ import LevelSelect from "./components/game/LevelSelect";
 import GameScreen from "./components/game/GameScreen";
 import ParentDashboard from "./components/parent/ParentDashboard";
 import Tutorial from "./components/game/Tutorial";
+import AdminPanel from "./components/admin/AdminPanel";
 
 type Screen = "name" | "tutorial" | "levels" | "game" | "parentAuth" | "parentDashboard";
 type AuthMode = "local" | "online";
 
 export default function App() {
+  // Hidden admin route — matches /admin exactly, no router needed.
+  if (typeof window !== "undefined" && window.location.pathname.replace(/\/$/, "") === "/admin") {
+    return <AdminPanel />;
+  }
+
+  return <AppMain />;
+}
+
+function AppMain() {
   const [screen, setScreen] = useState<Screen>("name");
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(1);
